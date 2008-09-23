@@ -1,0 +1,43 @@
+#!/usr/bin/env perl
+use AnyEvent;
+use AnyEvent::IRC::Client;
+
+my $c = AnyEvent->condvar;
+
+my $con = new AnyEvent::IRC::Client;
+
+$con->reg_cb (
+   connect => sub {
+      my ($con, $err) = @_;
+
+      if (defined $err) {
+         warn "Couldn't connect: $err\n";
+         $c->broadcast;
+      } else {
+         print "Connected!\n";
+      }
+
+      $con->register (qw/testbot testbot testbot/);
+   },
+   registered => sub {
+      my ($con) = @_;
+      print "I'm in!\n";
+
+      $con->reg_cb (buffer_empty => sub {
+         my ($con) = @_;
+         $con->unreg_me;
+         $con->disconnect ("Message delivered!");
+      });
+      $con->send_msg (
+         PRIVMSG => 'elmex', "Hello there i'm the cool AnyEvent::IRC test script!"
+      );
+   },
+   disconnect => sub {
+      print "I'm out ($_[1])!\n";
+      $c->broadcast
+   },
+);
+
+$con->connect ("localhost", 6667);
+
+$c->wait;
