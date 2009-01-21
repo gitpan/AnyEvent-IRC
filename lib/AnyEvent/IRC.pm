@@ -11,11 +11,11 @@ AnyEvent::IRC - An event system independend IRC protocol module
 
 =head1 VERSION
 
-Version 0.6
+Version 0.7
 
 =cut
 
-our $VERSION = '0.6';
+our $VERSION = '0.7';
 
 =head1 SYNOPSIS
 
@@ -38,7 +38,7 @@ Using the simplistic L<AnyEvent::IRC::Connection>:
       },
       irc_001 => sub {
          my ($con) = @_;
-         print "$_[1]->{prefix} says i'm in the IRC: $_[1]->{params}->[-1]!\n";
+         print "$_[1]->{prefix} says I'm in the IRC: $_[1]->{params}->[-1]!\n";
          $c->broadcast;
       }
    );
@@ -77,7 +77,7 @@ Using the more sophisticated L<AnyEvent::IRC::Client>:
 
    $con->send_srv (
       PRIVMSG => 'elmex',
-      "Hello there i'm the cool AnyEvent::IRC test script!"
+      "Hello there I'm the cool AnyEvent::IRC test script!"
    );
 
    $con->connect ("localhost", 6667, { nick => 'testbot' });
