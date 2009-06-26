@@ -2,6 +2,8 @@ package AnyEvent::IRC::Client;
 use strict;
 no warnings;
 
+use AnyEvent::Socket;
+use AnyEvent::Handle;
 use AnyEvent::IRC::Util
       qw/prefix_nick decode_ctcp split_prefix
          is_nick_prefix join_prefix encode_ctcp/;
@@ -97,13 +99,13 @@ Use C<reg_cb> as described in L<Object::Event> to register to such an event.
 
 =over 4
 
-=item B<registered>
+=item registered
 
 Emitted when the connection got successfully registered and the end of the MOTD
 (IRC command 376 or 422 (No MOTD file found)) was seen, so you can start sending
 commands and all ISUPPORT/PROTOCTL handshaking has been done.
 
-=item B<channel_add $msg, $channel @nicks>
+=item channel_add => $msg, $channel, @nicks
 
 Emitted when C<@nicks> are added to the channel C<$channel>,
 this happens for example when someone JOINs a channel or when you
@@ -112,7 +114,7 @@ get a RPL_NAMREPLY (see RFC1459).
 
 C<$msg> is the IRC message hash that as returned by C<parse_irc_msg>.
 
-=item B<channel_remove $msg, $channel @nicks>
+=item channel_remove => $msg, $channel, @nicks
 
 Emitted when C<@nicks> are removed from the channel C<$channel>,
 happens for example when they PART, QUIT or get KICKed.
@@ -120,54 +122,54 @@ happens for example when they PART, QUIT or get KICKed.
 C<$msg> is the IRC message hash that as returned by C<parse_irc_msg>
 or undef if the reason for the removal was a disconnect on our end.
 
-=item B<channel_change $msg $channel $old_nick $new_nick $is_myself>
+=item channel_change => $msg, $channel, $old_nick, $new_nick, $is_myself
 
 Emitted when a nickname on a channel changes. This is emitted when a NICK
 change occurs from C<$old_nick> to C<$new_nick> give the application a chance
 to quickly analyze what channels were affected.  C<$is_myself> is true when
 yourself was the one who changed the nick.
 
-=item B<channel_nickmode_update $channel $dest>
+=item channel_nickmode_update => $channel, $dest
 
 This event is emitted when the (user) mode (eg. op status) of an occupant of
 a channel changes. C<$dest> is the nickname on the C<$channel> who's mode was
 updated.
 
-=item B<channel_topic $channel $topic $who>
+=item channel_topic => $channel, $topic, $who
 
 This is emitted when the topic for a channel is discovered. C<$channel>
 is the channel for which C<$topic> is the current topic now.
 Which is set by C<$who>. C<$who> might be undefined when it's not known
 who set the channel topic.
 
-=item B<ident_change $nick $ident>
+=item ident_change => $nick, $ident
 
 Whenever the user and host of C<$nick> has been determined or a change
 happened this event is emitted.
 
-=item B<join $nick $channel $is_myself>
+=item join => $nick, $channel, $is_myself
 
 Emitted when C<$nick> enters the channel C<$channel> by JOINing.
 C<$is_myself> is true if yourself are the one who JOINs.
 
-=item B<part $nick $channel $is_myself $msg>
+=item part => $nick, $channel, $is_myself, $msg
 
 Emitted when C<$nick> PARTs the channel C<$channel>.
 C<$is_myself> is true if yourself are the one who PARTs.
 C<$msg> is the PART message.
 
-=item B<part $kicked_nick $channel $is_myself $msg>
+=item part => $kicked_nick, $channel, $is_myself, $msg
 
 Emitted when C<$kicked_nick> is KICKed from the channel C<$channel>.
 C<$is_myself> is true if yourself are the one who got KICKed.
 C<$msg> is the PART message.
 
-=item B<nick_change $old_nick $new_nick $is_myself>
+=item nick_change => $old_nick, $new_nick, $is_myself
 
 Emitted when C<$old_nick> is renamed to C<$new_nick>.
 C<$is_myself> is true when yourself was the one who changed the nick.
 
-=item B<ctcp $src, $target, $tag, $msg, $type>
+=item ctcp => $src, $target, $tag, $msg, $type
 
 Emitted when a CTCP message was found in either a NOTICE or PRIVMSG
 message. C<$tag> is the CTCP message tag. (eg. "PING", "VERSION", ...).
@@ -177,7 +179,7 @@ C<$src> is the source nick the message came from.
 C<$target> is the target nickname (yours) or the channel the ctcp was sent
 on.
 
-=item B<"ctcp_$tag", $src, $target, $msg, $type>
+=item "ctcp_$tag", => $src, $target, $msg, $type
 
 Emitted when a CTCP message was found in either a NOTICE or PRIVMSG
 message. C<$tag> is the CTCP message tag (in lower case). (eg. "ping", "version", ...).
@@ -187,25 +189,82 @@ C<$src> is the source nick the message came from.
 C<$target> is the target nickname (yours) or the channel the ctcp was sent
 on.
 
-=item B<quit $nick $msg>
+=item dcc_ready => $id, $dest, $type, $local_ip, $local_port
+
+Whenever a locally initiated DCC request is made this event is emitted
+after the listening socket has been setup.
+
+C<$id> is the DCC connection ID.
+
+C<$dest> and C<$type> are the destination and type of the DCC request.
+
+C<$local_ip> is the C<$local_ip> argument passed to C<start_dcc> or
+the IP the socket is bound to.
+
+C<$local_port> is the TCP port is the socket is listening on.
+
+=item dcc_request => $id, $src, $type, $arg, $addr, $port
+
+Whenever we receive a DCC offer from someone else this event is emitted.
+C<$id> is the DCC connection ID, C<$src> is his nickname, C<$type> is the DCC
+type in lower cases (eg. 'chat').  C<$arg> is the DCC type argument. C<$addr>
+is the IP address we can reach him at in ASCII encoded human readable form (eg.
+something like "127.0.0.1").  And C<$port> is the TCP port we have to connect
+to.
+
+To answer to his request you can just call C<dcc_accept> with the C<$id>.
+
+=item dcc_accepted => $id, $type, $hdl
+
+When the locally listening DCC socket has received a connection this event is emitted.
+
+C<$id> and C<$type> are the DCC connection ID and type of the DCC request.
+
+C<$hdl> is a pre-configured L<AnyEvent::Handle> object, which you only
+need to care about in case you want to implement your own DCC protocol.
+(This event has the on_error and on_eof events pre-configured to cleanup
+the data structures in this connection).
+
+=item dcc_connected => $id, $type, $hdl
+
+Whenever we accepted a DCC offer and connected by using C<dcc_accept> this
+event is emitted. C<$id> is the DCC connection ID.  C<$type> is the dcc type in
+lower case. C<$hdl> is the L<AnyEvent::Handle> object of the connection (see
+also C<dcc_accepted> above).
+
+=item dcc_close => $id, $type, $reason
+
+This event is emitted whenever a DCC connection is terminated.
+
+C<$id> and C<$type> are the DCC connection ID and type of the DCC request.
+
+C<$reason> is a human readable string indicating the reason for the end of
+the DCC request.
+
+=item dcc_chat_msg => $id, $msg
+
+This event is emitted for a DCC CHAT message. C<$id> is the DCC connection
+ID we received the message on. And C<$msg> is the message he sent us.
+
+=item quit => $nick, $msg
 
 Emitted when the nickname C<$nick> QUITs with the message C<$msg>.
 
-=item B<publicmsg $channel $ircmsg>
+=item publicmsg => $channel, $ircmsg
 
 Emitted for NOTICE and PRIVMSG where the target C<$channel> is a channel.
 C<$ircmsg> is the original IRC message hash like it is returned by C<parse_irc_msg>.
 
 The last parameter of the C<$ircmsg> will have all CTCP messages stripped off.
 
-=item B<privatemsg $nick $ircmsg>
+=item privatemsg => $nick, $ircmsg
 
 Emitted for NOTICE and PRIVMSG where the target C<$nick> (most of the time you) is a nick.
 C<$ircmsg> is the original IRC message hash like it is returned by C<parse_irc_msg>.
 
 The last parameter of the C<$ircmsg> will have all CTCP messages stripped off.
 
-=item B<error $code $message $ircmsg>
+=item error => $code, $message, $ircmsg
 
 Emitted when any error occurs. C<$code> is the 3 digit error id string from RFC
 1459 or the string 'ERROR'. C<$message> is a description of the error.
@@ -218,11 +277,11 @@ name from the RFC 2812. eg.:
 
 NOTE: This event is also emitted when a 'ERROR' message is received.
 
-=item B<debug_send $prefix $command @params>
+=item debug_send => $command, @params
 
 Is emitted everytime some command is sent.
 
-=item B<debug_recv $ircmsg>
+=item debug_recv => $ircmsg
 
 Is emitted everytime some command was received.
 
@@ -232,7 +291,7 @@ Is emitted everytime some command was received.
 
 =over 4
 
-=item B<new>
+=item $cl = AnyEvent::IRC::Client->new ()
 
 This constructor takes no arguments.
 
@@ -296,10 +355,14 @@ sub new {
          "${old_nick}_"
       };
 
+   $self->_setup_internal_dcc_handlers;
+
    return $self;
 }
 
-=item B<connect ($host, $port [, $info])>
+=item $cl->connect ($host, $port)
+
+=item $cl->connect ($host, $port, $info)
 
 This method does the same as the C<connect> method of L<AnyEvent::Connection>,
 but if the C<$info> parameter is passed it will automatically register with the
@@ -339,7 +402,7 @@ sub connect {
    $self->SUPER::connect ($host, $port);
 }
 
-=item B<register ($nick, $user, $real, $server_pass)>
+=item $cl->register ($nick, $user, $real, $server_pass)
 
 Sends the IRC registration commands NICK and USER.
 If C<$server_pass> is passed also a PASS command is generated.
@@ -363,7 +426,7 @@ sub register {
    $self->send_msg ("USER", $user || $nick, "*", "0", $real || $nick);
 }
 
-=item B<set_nick_change_cb $callback>
+=item $cl->set_nick_change_cb ($callback)
 
 This method lets you modify the nickname renaming mechanism when registering
 the connection. C<$callback> is called with the current nickname as first
@@ -387,7 +450,7 @@ sub set_nick_change_cb {
    $self->{nick_change} = $cb;
 }
 
-=item B<nick ()>
+=item $cl->nick ()
 
 Returns the current nickname, under which this connection
 is registered at the IRC server. It might be different from the
@@ -398,7 +461,7 @@ on login.
 
 sub nick { $_[0]->{nick} }
 
-=item B<is_my_nick ($string)>
+=item $cl->is_my_nick ($string)
 
 This returns true if C<$string> is the nick of ourself.
 
@@ -409,7 +472,7 @@ sub is_my_nick {
    $self->eq_str ($string, $self->nick);
 }
 
-=item B<registered ()>
+=item $cl->registered ()
 
 Returns a true value when the connection has been registered successful and
 you can send commands.
@@ -418,16 +481,17 @@ you can send commands.
 
 sub registered { $_[0]->{registered} }
 
-=item B<channel_list ([$channel])>
+=item $cl->channel_list ()
 
-Without C<$channel> parameter:
-This returns a hash reference. The keys are the currently joined channels in lower case.
-The values are hash references which contain the joined nicks as key and the nick modes
-as values (as returned from C<nick_modes ()>).
+=item $cl->channel_list ($channel)
+
+Without C<$channel> parameter: This returns a hash reference. The keys are the
+currently joined channels in lower case.  The values are hash references which
+contain the joined nicks as key (NOT in lower case!) and the nick modes as
+values (as returned from C<nick_modes ()>).
 
 If the C<$channel> parameter is given it returns the hash reference of the channel
 occupants or undef if the channel does not exist.
-
 
 =cut
 
@@ -441,7 +505,7 @@ sub channel_list {
    }
 }
 
-=item B<nick_modes ($channel, $nick)>
+=item $cl->nick_modes ($channel, $nick)
 
 This returns the mode map of the C<$nick> on C<$channel>.
 Returns undef if the channel isn't joined or the user is not on it.
@@ -454,10 +518,12 @@ sub nick_modes {
 
     my $c = $self->channel_list ($channel)
        or return undef;
-    return $c->{$self->lower_case ($nick)};
+
+    my (%lcc) = map { $self->lower_case ($_) => $c->{$_} } keys %$c;
+    return $lcc{$self->lower_case ($nick)};
 }
 
-=item B<send_msg (...)>
+=item $cl->send_msg (...)
 
 See also L<AnyEvent::IRC::Connection>.
 
@@ -469,7 +535,7 @@ sub send_msg {
    $self->SUPER::send_msg (@a);
 }
 
-=item B<send_srv ($command, @params)>
+=item $cl->send_srv ($command, @params)
 
 This function sends an IRC message that is constructed by C<mk_msg (undef,
 $command, @params)> (see L<AnyEvent::IRC::Util>). If the C<registered> event
@@ -509,7 +575,7 @@ sub send_srv {
    }
 }
 
-=item B<clear_srv_queue>
+=item $cl->clear_srv_queue ()
 
 Clears the server send queue.
 
@@ -521,7 +587,7 @@ sub clear_srv_queue {
 }
 
 
-=item B<send_chan ($channel, $command, @params)>
+=item $cl->send_chan ($channel, $command, @params)
 
 This function sends a message (constructed by C<mk_msg (undef, $command,
 @params)> to the server, like C<send_srv> only that it will queue
@@ -550,7 +616,7 @@ sub send_chan {
    }
 }
 
-=item B<clear_chan_queue ($channel)>
+=item $cl->clear_chan_queue ($channel)
 
 Clears the channel queue of the channel C<$channel>.
 
@@ -561,7 +627,7 @@ sub clear_chan_queue {
    $self->{chan_queue}->{$self->lower_case ($chan)} = [];
 }
 
-=item B<enable_ping ($interval, $cb)>
+=item $cl->enable_ping ($interval, $cb)
 
 This method enables a periodical ping to the server with an interval of
 C<$interval> seconds. If no PONG was received from the server until the next
@@ -598,7 +664,7 @@ sub enable_ping {
       });
 }
 
-=item B<lower_case ($str)>
+=item $cl->lower_case ($str)
 
 Converts the given string to lowercase according to CASEMAPPING setting given by
 the IRC server. If none was sent, the default - rfc1459 - will be used.
@@ -612,7 +678,7 @@ sub lower_case {
    return $_;
 }
 
-=item B<eq_str ($str1, $str2)>
+=item $cl->eq_str ($str1, $str2)
 
 This function compares two strings, whether they are describing the same
 IRC entity. They are lower cased by the networks case rules and compared then.
@@ -624,7 +690,9 @@ sub eq_str {
    $self->lower_case ($a) eq $self->lower_case ($b)
 }
 
-=item B<isupport ([$key])>
+=item $cl->isupport ()
+
+=item $cl->isupport ($key)
 
 Provides access to the ISUPPORT variables sent by the IRC server. If $key is
 given this method will return its value only, otherwise a hashref with all values
@@ -641,7 +709,7 @@ sub isupport {
    }
 }
 
-=item B<split_nick_mode ($prefixed_nick)>
+=item $cl->split_nick_mode ($prefixed_nick)
 
 This method splits the C<$prefix_nick> (eg. '+elmex') up into the
 mode of the user and the nickname.
@@ -682,7 +750,7 @@ sub split_nick_mode {
    }
 }
 
-=item B<map_prefix_to_mode ($prefix)>
+=item $cl->map_prefix_to_mode ($prefix)
 
 Maps the nick prefix (eg. '@') to the corresponding mode (eg. 'o').
 Returns undef if no such prefix exists (on the connected server).
@@ -694,7 +762,7 @@ sub map_prefix_to_mode {
    $self->{prefix2mode}->{$prefix}
 }
 
-=item B<map_mode_to_prefix ($mode)>
+=item $cl->map_mode_to_prefix ($mode)
 
 Maps the nick mode (eg. 'o') to the corresponding prefix (eg. '@').
 Returns undef if no such mode exists (on the connected server).
@@ -710,7 +778,7 @@ sub map_mode_to_prefix {
    return undef;
 }
 
-=item B<available_nick_modes ()>
+=item $cl->available_nick_modes ()
 
 Returns a list of possible modes on this IRC server. (eg. 'o' for op).
 
@@ -721,7 +789,7 @@ sub available_nick_modes {
    map { $self->map_prefix_to_mode ($_) } split //, $self->{prefix_chars}
 }
 
-=item B<is_channel_name ($string)>
+=item $cl->is_channel_name ($string)
 
 This return true if C<$string> is a channel name. It analyzes the prefix
 of the string (eg. if it is '#') and returns true if it finds a channel prefix.
@@ -736,7 +804,7 @@ sub is_channel_name {
    $string =~ /^([\Q$cchrs\E]+)(.+)$/;
 }
 
-=item B<nick_ident ($nick)>
+=item $cl->nick_ident ($nick)
 
 This method returns the whole ident of the C<$nick> if the informations is available.
 If the nick's ident hasn't been seen yet, undef is returned.
@@ -748,8 +816,8 @@ sub nick_ident {
    $self->{idents}->{$self->lower_case ($nick)}
 }
 
-=item B<ctcp_auto_reply ($ctcp_command, @msg)>
-=item B<ctcp_auto_reply ($ctcp_command, $coderef)>
+=item $cl->ctcp_auto_reply ($ctcp_command, @msg)
+=item $cl->ctcp_auto_reply ($ctcp_command, $coderef)
 
 This method installs an auto-reply for the reception of the C<$ctcp_command>
 via PRIVMSG, C<@msg> will be used as argument to the C<encode_ctcp> function of
@@ -779,6 +847,246 @@ sub ctcp_auto_reply {
    my ($self, $ctcp_command, @msg) = @_;
 
    $self->{ctcp_auto_replies}->{$ctcp_command} = \@msg;
+}
+
+sub _setup_internal_dcc_handlers {
+   my ($self) = @_;
+
+   $self->reg_cb (ctcp_dcc => sub {
+      my ($self, $src, $target, $msg, $type) = @_;
+
+      if ($self->is_my_nick ($target)) {
+         my ($dcc_type, $arg, $addr, $port) = split /\x20/, $msg;
+
+         $dcc_type = lc $dcc_type;
+
+         if ($dcc_type eq 'send') {
+            if ($msg =~ /SEND (.*?) (\d+) (\d+)/) {
+               ($arg, $addr, $port) = ($1, $2, $3);
+               $arg =~ s/^\"(.*)\"$/\1/;
+            }
+         }
+
+         $addr = format_address (pack "N", $addr);
+
+         my $id = ++$self->{dcc_id};
+
+         $self->{dcc}->{$id} = {
+            type => lc ($dcc_type),
+            dest => $self->lower_case ($src),
+            ip   => $addr,
+            port => $port,
+            arg  => $arg,
+         };
+
+         $self->event (dcc_request => $id, $src, $dcc_type, $arg, $addr, $port);
+      }
+   });
+
+   $self->reg_cb (dcc_ready => sub {
+      my ($self, $id, $dest, $type, $local_ip, $local_port) = @_;
+
+      $local_ip = unpack ("N", parse_address ($local_ip));
+
+      if ($type eq 'chat') {
+         $self->send_msg (
+            PRIVMSG => $dest,
+            encode_ctcp ([DCC => "CHAT", "CHAT", $local_ip, $local_port]));
+
+      } elsif ($type eq 'send') {
+         $self->send_msg (
+            PRIVMSG => $dest,
+            encode_ctcp ([DCC => "SEND", "NOTHING", $local_ip, $local_port]));
+      }
+   });
+
+   $self->reg_cb (dcc_accepted => sub {
+      my ($self, $id, $type, $hdl) = @_;
+
+      if ($type eq 'chat') {
+         $hdl->on_read (sub {
+            my ($hdl) = @_;
+
+            $hdl->push_read (line => sub {
+               my ($hdl, $line) = @_;
+               $self->event (dcc_chat_msg => $id, $line);
+            });
+         });
+      }
+   });
+
+   $self->reg_cb (dcc_connected => sub {
+      my ($self, $id, $type, $hdl) = @_;
+
+      if ($type eq 'chat') {
+         $hdl->on_read (sub {
+            my ($hdl) = @_;
+
+            $hdl->push_read (line => sub {
+               my ($hdl, $line) = @_;
+               $self->event (dcc_chat_msg => $id, $line);
+            });
+         });
+      }
+   });
+}
+
+=item $cl->dcc_initiate ($dest, $type, $timeout, $local_ip, $local_port)
+
+This function will initiate a DCC TCP connection to C<$dest> of type C<$type>.
+It will setup a listening TCP socket on C<$local_port>, or a random port if
+C<$local_port> is undefined. C<$local_ip> is the IP that is being sent to the
+receiver of the DCC connection. If it is undef the local socket will be bound
+to 0 (or "::" in case of IPv6) and C<$local_ip> will probably be something like
+"0.0.0.0". It is always advisable to set C<$local_ip> to a (from the "outside",
+what ever that might be) reachable IP Address.
+
+C<$timeout> is the time in seconds after which the listening socket will be
+closed if the receiver didn't connect yet. The default is 300 (5 minutes).
+
+When the local listening socket has been setup the C<dcc_ready> event is
+emitted.  When the receiver connects to the socket the C<dcc_accepted> event is
+emitted.  And whenever a dcc connection is closed the C<dcc_close> event is
+emitted.
+
+For canceling the DCC offer or closing the connection see C<dcc_disconnect> below.
+
+The return value of this function will be the ID of the initiated DCC connection,
+which can be used for functions such as C<dcc_disconnect>, C<send_dcc_chat> or
+C<dcc_handle>.
+
+=cut
+
+sub dcc_initiate {
+   my ($self, $dest, $type, $timeout, $local_ip, $local_port) = @_;
+
+   $dest = $self->lower_case ($dest);
+   $type = lc $type;
+
+   my $id = ++$self->{dcc_id};
+   my $dcc = $self->{dcc}->{$id} = { id => $id, type => $type, dest => $dest };
+
+   $dcc->{timeout} = AnyEvent->timer (after => $timeout || 5 * 60, cb => sub {
+      $self->dcc_disconnect ($id, "TIMEOUT");
+   });
+
+   $dcc->{listener} = tcp_server undef, $local_port, sub {
+      my ($fh, $h, $p) = @_;
+      delete $dcc->{listener};
+      delete $dcc->{timeout};
+
+      $dcc->{handle} = AnyEvent::Handle->new (
+         fh => $fh,
+         on_eof => sub {
+            $self->dcc_disconnect ($id, "EOF");
+         },
+         on_error => sub {
+            $self->dcc_disconnect ($id, "ERROR: $!");
+         }
+      );
+
+      $self->event (dcc_accepted => $id, $type, $dcc->{handle});
+
+   }, sub {
+      my ($fh, $host, $port) = @_;
+      $local_ip   = $host unless defined $local_ip;
+      $local_port = $port;
+
+      $dcc->{local_ip}   = $local_ip;
+      $dcc->{local_port} = $local_port;
+
+      $self->event (dcc_ready => $id, $dest, $type, $local_ip, $local_port);
+   };
+
+   $id
+}
+
+
+=item $cl->dcc_disconnect ($id, $reason)
+
+In case you want to withdraw a DCC offer sent by C<start_dcc> or close
+a DCC connection you call this function.
+
+C<$id> is the DCC connection ID.  C<$reason> should be a human readable reason
+why you ended the dcc offer, but it's only used for local logging purposes (see
+C<dcc_close> event).
+
+=cut
+
+sub dcc_disconnect {
+   my ($self, $id, $reason) = @_;
+
+   if (my $dcc = delete $self->{dcc}->{$id}) {
+      delete $dcc->{handle};
+      $self->event (dcc_close => $id, $dcc->{type}, $reason);
+   }
+}
+
+=item $cl->dcc_accept ($id, $timeout)
+
+This will accept an incoming DCC request as received by the C<dcc_request>
+event. The C<dcc_connected> event will be emitted when we successfully
+connected. And the C<dcc_close> event when the connection was disconnected.
+
+C<$timeout> is the connection try timeout in seconds. The default is 300 (5 minutes).
+
+=cut
+
+sub dcc_accept {
+   my ($self, $id, $timeout) = @_;
+
+   my $dcc = $self->{dcc}->{$id}
+      or return;
+
+   $dcc->{timeout} = AnyEvent->timer (after => $timeout || 5 * 60, cb => sub {
+      $self->dcc_disconnect ($id, "CONNECT TIMEOUT");
+   });
+
+   $dcc->{connect} = tcp_connect $dcc->{ip}, $dcc->{port}, sub {
+      my ($fh) = @_;
+      delete $dcc->{timeout};
+      delete $dcc->{connect};
+
+      unless ($fh) {
+         $self->dcc_disconnect ($id, "CONNECT ERROR: $!");
+         return;
+      }
+
+      $dcc->{handle} = AnyEvent::Handle->new (
+         fh => $fh,
+         on_eof => sub {
+            delete $dcc->{handle};
+            $self->dcc_disconnect ($id, "EOF");
+         },
+         on_error => sub {
+            delete $dcc->{handle};
+            $self->dcc_disconnect ($id, "ERROR: $!");
+         }
+      );
+
+      $self->event (dcc_connected => $id, $dcc->{type}, $dcc->{handle});
+   };
+
+   $id
+}
+
+sub dcc_handle {
+   my ($self, $id) = @_;
+
+   if (my $dcc = $self->{dcc}->{$id}) {
+      return $dcc->{handle}
+   }
+   return;
+}
+
+sub send_dcc_chat {
+   my ($self, $id, $msg) = @_;
+
+   if (my $dcc = $self->{dcc}->{$id}) {
+      if ($dcc->{handle}) {
+         $dcc->{handle}->push_write ("$msg\015\012");
+      }
+   }
 }
 
 ################################################################################
@@ -1195,7 +1503,7 @@ RFC 1459 - Internet Relay Chat: Client Protocol
 
 =head1 COPYRIGHT & LICENSE
 
-Copyright 2006 Robin Redeker, all rights reserved.
+Copyright 2006-2009 Robin Redeker, all rights reserved.
 
 This program is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

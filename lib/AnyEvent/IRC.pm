@@ -11,11 +11,11 @@ AnyEvent::IRC - An event system independend IRC protocol module
 
 =head1 VERSION
 
-Version 0.7
+Version 0.8
 
 =cut
 
-our $VERSION = '0.7';
+our $VERSION = '0.8';
 
 =head1 SYNOPSIS
 
@@ -176,7 +176,7 @@ And these people have helped to work on L<AnyEvent::IRC>:
 
 =head1 COPYRIGHT & LICENSE
 
-Copyright 2006 Robin Redeker, all rights reserved.
+Copyright 2006-2009 Robin Redeker, all rights reserved.
 
 This program is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.
