@@ -8,11 +8,11 @@ AnyEvent::IRC - An event system independend IRC protocol module
 
 =head1 VERSION
 
-Version 0.81
+Version 0.9
 
 =cut
 
-our $VERSION = '0.81';
+our $VERSION = '0.9';
 
 =head1 SYNOPSIS
 
@@ -169,8 +169,8 @@ Thanks to Marc Lehmann for the new AnyEvent module!
 
 And these people have helped to work on L<AnyEvent::IRC>:
 
-   * Maximilian Gaß - Added support for ISUPPORT and CASEMAPPING.
-   * Zaba           - Thanks for the useful input about IRC.
+   * Maximilian Gass - Added support for ISUPPORT and CASEMAPPING.
+   * Zaba            - Thanks for the useful input about IRC.
 
 =head1 COPYRIGHT & LICENSE
 
