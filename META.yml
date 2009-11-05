@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:               AnyEvent-IRC
-version:            0.9
+version:            0.95
 abstract:           An event system independend IRC protocol module
 author:
     - Robin Redeker <elmex@ta-sa.org>
@@ -13,6 +13,7 @@ build_requires:
 requires:
     AnyEvent:       5.111
     common::sense:  0
+    Encode:         0
     Object::Event:  0.6
     Scalar::Util:   0
     Test::More:     0
