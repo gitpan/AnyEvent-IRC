@@ -4,15 +4,15 @@ use AnyEvent;
 
 =head1 NAME
 
-AnyEvent::IRC - An event system independend IRC protocol module
+AnyEvent::IRC - An event based IRC protocol client API
 
 =head1 VERSION
 
-Version 0.95
+Version 0.96
 
 =cut
 
-our $VERSION = '0.95';
+our $VERSION = '0.96';
 
 =head1 SYNOPSIS
 
@@ -171,6 +171,8 @@ And these people have helped to work on L<AnyEvent::IRC>:
 
    * Maximilian Gass - Added support for ISUPPORT and CASEMAPPING.
    * Zaba            - Thanks for the useful input about IRC.
+   * tokuhirom       - Thanks for patches for the kick event.
+   * Kazuhiro Osawa  - Thanks for the documenation fix.
 
 =head1 COPYRIGHT & LICENSE
 

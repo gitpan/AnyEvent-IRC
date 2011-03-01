@@ -161,11 +161,11 @@ Emitted when C<$nick> PARTs the channel C<$channel>.
 C<$is_myself> is true if yourself are the one who PARTs.
 C<$msg> is the PART message.
 
-=item part => $kicked_nick, $channel, $is_myself, $msg
+=item kick => $kicked_nick, $channel, $is_myself, $msg, $kicker_nick
 
-Emitted when C<$kicked_nick> is KICKed from the channel C<$channel>.
-C<$is_myself> is true if yourself are the one who got KICKed.
-C<$msg> is the PART message.
+Emitted when C<$kicked_nick> is KICKed from the channel C<$channel> by
+C<$kicker_nick>.  C<$is_myself> is true if yourself are the one who got KICKed.
+C<$msg> is the KICK message.
 
 =item nick_change => $old_nick, $new_nick, $is_myself
 
@@ -1357,7 +1357,9 @@ sub anymsg_cb {
    if ($cmd =~ /^\d\d\d$/ && not ($cmd >= 400 && $cmd <= 599)) {
       $self->event (statmsg => $msg);
    } elsif (($cmd >= 400 && $cmd <= 599) || $cmd eq 'error') {
-      $self->event (error => $msg->{command}, $msg->{params}->[-1], $msg);
+      $self->event (error => $msg->{command},
+                    (@{$msg->{params}} ? $msg->{params}->[-1] : ''),
+                    $msg);
    }
 }
 
@@ -1485,7 +1487,7 @@ sub nick_cb {
    $self->event (nick_change => $nick, $newnick, $wasme);
 
    for (@chans) {
-      $self->event (channel_change => $_, $nick, $newnick, $wasme);
+      $self->event (channel_change => $msg, $_, $nick, $newnick, $wasme);
    }
 }
 
@@ -1551,8 +1553,9 @@ sub kick_cb {
    my ($self, $msg) = @_;
    my $chan        = $msg->{params}->[0];
    my $kicked_nick = $msg->{params}->[1];
+   my $kicker_nick = prefix_nick($msg);
 
-   $self->event (kick           => $kicked_nick, $chan, $self->_was_me ($msg), $msg->{params}->[1]);
+   $self->event (kick           => $kicked_nick, $chan, $self->_was_me ($msg), $msg->{params}->[2], $kicker_nick);
    $self->channel_remove ($msg, $chan, [$kicked_nick]);
    $self->event (channel_remove => $msg, $chan, $kicked_nick);
 }

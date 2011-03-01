@@ -15,7 +15,7 @@ AnyEvent::IRC::Util - Common utilities that help with IRC protocol handling
 
 =head1 SYNOPSIS
 
-   use AnyEvent::IRC qw/parse_irc_msg mk_msg/;
+   use AnyEvent::IRC::Util qw/parse_irc_msg mk_msg/;
 
    my $msgdata = mk_msg (undef, PRIVMSG => "mcmanus", "my hands glow!");
 
@@ -26,7 +26,7 @@ handling the IRC protocol.
 
 You can export these with eg.:
 
-   use AnyEvent::IRC qw/parse_irc_msg/;
+   use AnyEvent::IRC::Util qw/parse_irc_msg/;
 
 =over 4
 
@@ -349,8 +349,6 @@ replies to the reply name in RFC 2812 (which you may also consult).
 C<$code> is returned if no name for C<$code> exists
 (as some server may extended the protocol).
 
-=back
-
 =cut
 
 our %RFC_NUMCODE_MAP = (
@@ -534,6 +532,8 @@ sub split_unicode_string {
 
    @lines
 }
+
+=back
 
 =head1 AUTHOR
 

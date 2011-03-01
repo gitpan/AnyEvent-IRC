@@ -129,7 +129,9 @@ sub connect {
                },
                on_read => sub {
                   my ($hdl) = @_;
-                  $hdl->push_read (line => sub {
+                  # \015* for some broken servers, which might have an extra
+                  # carriage return in their MOTD.
+                  $hdl->push_read (line => qr{\015*\012}, sub {
                      $self->_feed_irc_data ($_[1]);
                   });
                },

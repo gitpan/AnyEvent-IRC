@@ -1,5 +1,13 @@
 Revision history for AnyEvent::IRC
 
+0.96    Tue Mar  1 08:23:09 CET 2011
+        - fixed pod in AE::IRC::Util.
+        - applied patches from tokuhirom for the kick event.
+        - small fix in anymsg_cb.
+        - fixed documentation problems, for example w.r.t. channel_change.
+        - added "support" for broken IRC servers, which send multiple
+          carriage returns on line endings.
+
 0.95    Thu Nov  5 00:15:55 CET 2009
         - added away_status method and events for tracking your away status.
         - implemented send_long_message.
