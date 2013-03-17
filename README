@@ -2,7 +2,7 @@ NAME
     AnyEvent::IRC - An event based IRC protocol client API
 
 VERSION
-    Version 0.96
+    Version 0.97
 
 SYNOPSIS
     Using the simplistic AnyEvent::IRC::Connection:
@@ -152,6 +152,8 @@ ACKNOWLEDGEMENTS
        * Zaba            - Thanks for the useful input about IRC.
        * tokuhirom       - Thanks for patches for the kick event.
        * Kazuhiro Osawa  - Thanks for the documenation fix.
+       * Angel Abad      - Thanks for the spelling fixes.
+       * Lee Aylward     - Thanks for bug spotting and fixing.
 
 COPYRIGHT & LICENSE
     Copyright 2006-2009 Robin Redeker, all rights reserved.

@@ -1,35 +1,27 @@
-{
-   "no_index" : {
-      "directory" : [
-         "t",
-         "inc"
-      ]
-   },
-   "meta-spec" : {
-      "version" : 1.4,
-      "url" : "http://module-build.sourceforge.net/META-spec-v1.4.html"
-   },
-   "generated_by" : "ExtUtils::MakeMaker version 6.56",
-   "distribution_type" : "module",
-   "version" : "0.96",
-   "name" : "AnyEvent-IRC",
-   "author" : [
-      "Robin Redeker <elmex@ta-sa.org>"
-   ],
-   "license" : "perl",
-   "build_requires" : {
-      "ExtUtils::MakeMaker" : 0
-   },
-   "requires" : {
-      "Scalar::Util" : 0,
-      "Test::More" : 0,
-      "AnyEvent" : "5.111",
-      "Object::Event" : "0.6",
-      "common::sense" : 0,
-      "Encode" : 0
-   },
-   "abstract" : "An event based IRC protocol client API",
-   "configure_requires" : {
-      "ExtUtils::MakeMaker" : 0
-   }
-}
+---
+abstract: 'An event based IRC protocol client API'
+author:
+  - 'Robin Redeker <elmex@ta-sa.org>'
+build_requires:
+  ExtUtils::MakeMaker: 0
+configure_requires:
+  ExtUtils::MakeMaker: 0
+dynamic_config: 1
+generated_by: 'ExtUtils::MakeMaker version 6.64, CPAN::Meta::Converter version 2.112621'
+license: perl
+meta-spec:
+  url: http://module-build.sourceforge.net/META-spec-v1.4.html
+  version: 1.4
+name: AnyEvent-IRC
+no_index:
+  directory:
+    - t
+    - inc
+requires:
+  AnyEvent: 5.111
+  Encode: 0
+  Object::Event: 0.6
+  Scalar::Util: 0
+  Test::More: 0
+  common::sense: 0
+version: 0.97

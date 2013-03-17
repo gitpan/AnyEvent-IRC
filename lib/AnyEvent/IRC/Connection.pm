@@ -6,6 +6,7 @@ use AnyEvent::Socket;
 use AnyEvent::Handle;
 use AnyEvent::IRC::Util qw/mk_msg parse_irc_msg/;
 use Object::Event;
+use Scalar::Util qw/weaken/;
 
 use base Object::Event::;
 
@@ -140,6 +141,7 @@ sub connect {
                }
             );
 
+         $self->{connected} = 1;
          $self->event ('connect');
       }, (defined $prep ? (ref $prep ? $prep : sub { $prep }) : ());
 }

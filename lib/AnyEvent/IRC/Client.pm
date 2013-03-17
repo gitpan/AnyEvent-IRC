@@ -345,6 +345,7 @@ sub new {
    my $class = ref($this) || $this;
    my $self = $class->SUPER::new (@_);
 
+   $self->reg_cb (irc_001     => \&welcome_cb);
    $self->reg_cb (irc_376     => \&welcome_cb);
    $self->reg_cb (irc_422     => \&welcome_cb);
    $self->reg_cb (irc_005     => \&isupport_cb);
@@ -435,7 +436,9 @@ sub cleanup {
 This method does the same as the C<connect> method of L<AnyEvent::Connection>,
 but if the C<$info> parameter is passed it will automatically register with the
 IRC server upon connect for you, and you won't have to call the C<register>
-method yourself.
+method yourself. If C<$info> only contains the timeout value it will not
+automatically connect, this way you can pass a custom connect timeout value
+without having to register.
 
 The keys of the hash reference you can pass in C<$info> are:
 
@@ -452,7 +455,9 @@ All keys, except C<nick> are optional.
 sub connect {
    my ($self, $host, $port, $info) = @_;
 
-   if (defined $info) {
+   my $timeout = delete $info->{timeout};
+
+   if (defined $info and keys %$info) {
       $self->{register_cb_guard} = $self->reg_cb (
          ext_before_connect => sub {
             my ($self, $err) = @_;
@@ -468,7 +473,7 @@ sub connect {
       );
    }
 
-   $self->SUPER::connect ($host, $port, $info->{timeout});
+   $self->SUPER::connect ($host, $port, $timeout);
 }
 
 =item $cl->register ($nick, $user, $real, $server_pass)
@@ -957,7 +962,7 @@ sub is_channel_name {
 
 =item $cl->nick_ident ($nick)
 
-This method returns the whole ident of the C<$nick> if the informations is available.
+This method returns the whole ident of the C<$nick> if the information is available.
 If the nick's ident hasn't been seen yet, undef is returned.
 
 B<NOTE:> If you want to rely on the C<nick_ident> of your own nick you should
@@ -1564,7 +1569,7 @@ sub quit_cb {
    my ($self, $msg) = @_;
    my $nick = prefix_nick ($msg);
 
-   $self->event (quit => $nick, $msg->{params}->[1]);
+   $self->event (quit => $nick, $msg->{params}->[0]);
 
    for (keys %{$self->{channel_list}}) {
       if ($self->{channel_list}->{$_}->{$nick}) {

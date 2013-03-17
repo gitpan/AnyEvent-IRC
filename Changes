@@ -1,5 +1,15 @@
 Revision history for AnyEvent::IRC
 
+0.97    Sun Mar 17 19:20:30 CET 2013
+        - corrected minor spelling fixes thanks to an rt patch.
+        - fixed AnyEvent::IRC::Connection::is_connected to actually return true
+          when connected.
+        - AE::IRC::Client::connect can now also connect only with a timeout without
+          having to register.
+        - Server reply of 001 is now also considered as "successfully registered".
+          Thanks for Lee to spot this.
+        - "quit" event gets the right parameter from the message now. Thanks to Lee!
+
 0.96    Tue Mar  1 08:23:09 CET 2011
         - fixed pod in AE::IRC::Util.
         - applied patches from tokuhirom for the kick event.

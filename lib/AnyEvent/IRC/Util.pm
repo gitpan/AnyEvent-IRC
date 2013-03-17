@@ -207,7 +207,7 @@ This function encodes a CTCP message for the transmission via the NOTICE
 or PRIVMSG command. C<@msg> is an array of strings or array references.
 If an array reference occurs in the C<@msg> array it's first
 element will be interpreted as CTCP TAG (eg. one of PING, VERSION, .. whatever)
-the rest of the array ref will be appended to the tag and seperated by
+the rest of the array ref will be appended to the tag and separated by
 spaces.
 
 All parts of the message will be concatenated and lowlevel quoted.

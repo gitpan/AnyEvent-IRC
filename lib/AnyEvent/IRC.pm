@@ -8,11 +8,11 @@ AnyEvent::IRC - An event based IRC protocol client API
 
 =head1 VERSION
 
-Version 0.96
+Version 0.97
 
 =cut
 
-our $VERSION = '0.96';
+our $VERSION = '0.97';
 
 =head1 SYNOPSIS
 
@@ -173,6 +173,8 @@ And these people have helped to work on L<AnyEvent::IRC>:
    * Zaba            - Thanks for the useful input about IRC.
    * tokuhirom       - Thanks for patches for the kick event.
    * Kazuhiro Osawa  - Thanks for the documenation fix.
+   * Angel Abad      - Thanks for the spelling fixes.
+   * Lee Aylward     - Thanks for bug spotting and fixing.
 
 =head1 COPYRIGHT & LICENSE
 
